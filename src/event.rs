@@ -2,6 +2,8 @@
 //! and handle top-level state, as well as handle input events such as keyboard
 //! and mouse.
 
+use std::collections::HashMap;
+
 /// A key code.
 pub use sdl2::keyboard::Keycode;
 
@@ -24,12 +26,52 @@ use sdl2::keyboard;
 
 
 use context::Context;
-use GameResult;
+use graphics;
+use {GameResult, GameError};
 use timer;
 
 use std::time::Duration;
 
+pub struct Assets {
+    images: HashMap<String, graphics::Image>,
+    font: HashMap<String, graphics::Font>,
+}
 
+impl Assets {
+    pub fn new() -> Self {
+        Self {
+            images: HashMap::new(),
+            font: HashMap::new(),
+        }
+    }
+
+    pub fn add_image(&mut self, name: &str, image: graphics::Image) -> GameResult<()> {
+        self.images.insert(name.to_string(), image);
+        Ok(())
+    }
+
+    pub fn get_image(&self, name: &str) -> GameResult<&graphics::Image> {
+        let img = self.images.get(name);
+        Ok(img.unwrap())
+    }
+
+    pub fn add_font(&mut self, name: &str, font: graphics::Font) -> GameResult<()> {
+        self.font.insert(name.to_string(), font);
+        Ok(())
+    }
+
+    pub fn get_font(&self, name: &str) -> GameResult<&graphics::Font> {
+        let font = self.font.get(name);
+        Ok(font.unwrap())
+    }
+}
+
+pub enum Transition {
+    None,
+    Push(Box<EventHandler>), // Pushes another state on the stack
+    Swap(Box<EventHandler>), // Removes current state from stack before adding the new one
+    Pop, // Remove state on top of stack
+}
 
 
 /// A trait defining event callbacks; your primary interface with
@@ -43,13 +85,13 @@ use std::time::Duration;
 pub trait EventHandler {
     /// Called upon each physics update to the game.
     /// This should be where the game's logic takes place.
-    fn update(&mut self, ctx: &mut Context, dt: Duration) -> GameResult<()>;
+    fn update(&mut self, ctx: &mut Context, assets: &Assets, dt: Duration) -> GameResult<Transition>;
 
     /// Called to do the drawing of your game.
     /// You probably want to start this with
     /// `graphics::clear()` and end it with
     /// `graphics::present()` and `timer::sleep_until_next_frame()`
-    fn draw(&mut self, ctx: &mut Context) -> GameResult<()>;
+    fn draw(&mut self, ctx: &mut Context, assets: &Assets) -> GameResult<()>;
 
     fn mouse_button_down_event(&mut self, _button: mouse::MouseButton, _x: i32, _y: i32) {}
 
@@ -83,12 +125,13 @@ pub trait EventHandler {
     }
 }
 
+/*
 /// Runs the game's main loop, calling event callbacks on the given state
 /// object as events occur.
 ///
 /// It does not try to do any type of framerate limiting.  See the
 /// documentation for the `timer` module for more info.
-pub fn run<S>(ctx: &mut Context, state: &mut S) -> GameResult<()>
+pub fn run<S, T>(ctx: &mut Context, state: &mut S) -> GameResult<()>
     where S: EventHandler
 {
     {
@@ -168,4 +211,4 @@ pub fn run<S>(ctx: &mut Context, state: &mut S) -> GameResult<()>
     }
 
     Ok(())
-}
+}*/
